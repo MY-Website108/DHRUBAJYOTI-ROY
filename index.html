@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dhrubajyoti Roy | Sonic Architect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Inter:wght@300;500;900&display=swap');
+        
+        :root { scroll-behavior: smooth; }
+        body { 
+            margin: 0; 
+            background-color: #05080a; 
+            color: #e2e8f0; 
+            font-family: 'Inter', sans-serif; 
+            overflow-x: hidden; 
+            -webkit-font-smoothing: antialiased;
+            touch-action: manipulation;
+        }
+
+        #canvas-container { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            z-index: -1; pointer-events: none;
+            will-change: transform;
+        }
+        
+        .glass-card { 
+            background: rgba(10, 25, 20, 0.4); 
+            backdrop-filter: blur(15px); 
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(16, 185, 129, 0.2); 
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            will-change: transform, opacity;
+        }
+
+        @media (min-width: 1024px) {
+            .glass-card:hover {
+                border: 1px solid rgba(16, 185, 129, 0.6);
+                box-shadow: 0 0 50px rgba(16, 185, 129, 0.15);
+                transform: translateY(-10px) rotateX(2deg);
+            }
+        }
+
+        .nav-glass {
+            background: rgba(5, 8, 10, 0.85);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(16, 185, 129, 0.1);
+        }
+
+        .section-divider {
+            clip-path: polygon(0 0, 100% 2%, 100% 100%, 0 98%);
+            background: rgba(16, 185, 129, 0.02);
+        }
+
+        .video-wrapper {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            gap: 1.5rem;
+            padding: 20px 5%;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .video-wrapper::-webkit-scrollbar { display: none; }
+
+        .video-container {
+            flex: 0 0 280px;
+            scroll-snap-align: center;
+            transition: transform 0.5s ease;
+        }
+        
+        @media (min-width: 768px) {
+            .video-container { flex: 0 0 350px; transform: rotateY(10deg); }
+            .video-container:hover { transform: rotateY(0deg) scale(1.05); z-index: 10; }
+        }
+
+        .hero-title { 
+            font-family: 'Syncopate', sans-serif; 
+            font-size: clamp(2rem, 10vw, 5rem); 
+            line-height: 1.1;
+            letter-spacing: -0.04em;
+            background: linear-gradient(to bottom, #fff, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .cursor-glow { 
+            position: fixed; width: 400px; height: 400px; 
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%); 
+            border-radius: 50%; pointer-events: none; z-index: 0; 
+            transform: translate(-50%, -50%); display: none;
+        }
+        @media (min-width: 1024px) { .cursor-glow { display: block; } }
+
+        .floating-img {
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            max-width: 80%;
+            height: auto;
+        }
+
+        input, textarea { font-size: 16px !important; } /* Prevents iOS zoom on focus */
+    </style>
+</head>
+<body>
+
+    <div class="cursor-glow" id="cursor"></div>
+    <div id="canvas-container"></div>
+
+    <nav class="fixed top-0 w-full z-50 nav-glass">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="font-black tracking-tighter text-lg md:text-xl text-white">DHRUBA<span class="text-emerald-500">.ROY</span></div>
+            <div class="flex gap-2 md:gap-4">
+                <a href="https://www.instagram.com/_dhruubboo_/" target="_blank" class="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    <svg width="18" height="18" fill="#10b981" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                </a>
+                <a href="https://youtube.com/@dhrubajyoti_roy" target="_blank" class="bg-emerald-500 px-4 py-2 rounded-lg text-black text-[10px] font-bold uppercase tracking-tighter flex items-center gap-2">
+                    <svg width="14" height="14" fill="black" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+                    Join
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="h-screen flex flex-col items-center justify-center text-center px-6">
+        <h1 class="hero-title mb-4">DHRUBAJYOTI<br><span class="opacity-40" style="-webkit-text-stroke: 1px #fff; -webkit-text-fill-color: transparent;">ROY</span></h1>
+        <p class="text-[10px] md:text-xs tracking-[0.8em] text-emerald-400 uppercase">Sonic Architect</p>
+    </section>
+
+    <section class="py-20 px-6 max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div class="glass-card p-8 md:p-12 rounded-[2rem] z-10">
+                <h2 class="text-3xl font-black italic mb-6 text-emerald-500 uppercase">THE VISION</h2>
+                <div class="space-y-4 text-gray-400 leading-relaxed text-sm md:text-base">
+                    <p>I am <strong class="text-white">Dhrubajyoti Roy</strong>, a student at <strong class="text-white">KV New Bongaigaon</strong> exploring the intersection of technology and music.</p>
+                    <p>My guitar serves as the primary interface for creating cinematic landscapes and original riffs.</p>
+                </div>
+            </div>
+            <div class="flex flex-col md:flex-row gap-6 justify-center items-center">
+                <img src="2.png" class="floating-img rounded-xl w-48 md:w-64" alt="Portfolio 1">
+                
+            </div>
+        </div>
+    </section>
+
+    <section class="py-10">
+        <div class="px-6 md:px-12 mb-6">
+            <h2 class="text-3xl font-black italic text-emerald-500 uppercase">Archives</h2>
+        </div>
+        <div id="video-grid" class="video-wrapper"></div>
+    </section>
+
+    <section class="py-10 bg-emerald-500/5">
+        <div class="px-6 md:px-12 mb-6">
+            <h2 class="text-3xl font-black italic text-white uppercase">Shorts</h2>
+        </div>
+        <div id="shorts-grid" class="video-wrapper"></div>
+    </section>
+
+    <section class="py-20 px-6">
+        <div class="max-w-xl mx-auto glass-card p-8 md:p-12 rounded-[2rem]">
+            <h2 class="text-2xl font-black mb-8 text-center text-emerald-500 uppercase">Contact</h2>
+            <div class="space-y-4">
+                <input type="text" id="contact_name" placeholder="Name" class="w-full bg-black/20 border-b border-emerald-500/30 p-3 outline-none focus:border-emerald-500 text-white">
+                <textarea id="contact_message" placeholder="Message" rows="3" class="w-full bg-black/20 border-b border-emerald-500/30 p-3 outline-none focus:border-emerald-500 text-white"></textarea>
+                <button onclick="sendWhatsApp()" class="w-full py-4 bg-emerald-500 text-black font-black uppercase tracking-widest text-xs rounded-lg">
+                    Send Signal
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <footer class="py-10 text-center text-emerald-900 text-[8px] tracking-[0.5em] uppercase">
+        © 2026 DHRUBAJYOTI ROY
+    </footer>
+
+    <script>
+        const videoIds = ['2aGuQ0x4iYE', '5hxCDASrNsI', 'VfVgZkEPzSA', 'JK6GaWtt_xQ', 'ZuLyQqm8yek', '6CS14mkYL-o', 'Djq9AevQnqQ', 'LfhGWFpnlg8', 'R3xjiRNIZI4', 'B51WfB85mcQ', 'vuOmaD5cpHs', 'G4VRhB9yrVY', 'GgEi3Fg1hok', 'cka-xb5-ypY', 'oqcPBq94Zys', 'nZFCcfhrlTg', '6qQy-LSAiXI', 'oM7Wxrwl0MM', 'VAZbNu6O0zU'];
+        const shortIds = ['q0va0qovbG4', 'k_n0r4JP2cU', 'vQsoJwS8HD0', 'hXW2mKBSPF8', '9DFecvT4Ls4', 'tEdWcgjLVUk', 'oX583evbXQY', 'xbHxB3Rgtcw', 'mz3GbfE02X8'];
+
+        const renderGallery = (containerId, ids, isShort = false) => {
+            const container = document.getElementById(containerId);
+            const fragment = document.createDocumentFragment();
+            ids.forEach(id => {
+                const div = document.createElement('div');
+                div.className = 'video-container';
+                div.innerHTML = `
+                    <div class="glass-card rounded-2xl overflow-hidden group ${isShort ? 'aspect-[9/16]' : ''}">
+                        <div class="relative ${isShort ? 'h-full' : 'h-48 md:h-56'}">
+                            <img src="https://img.youtube.com/vi/${id}/mqdefault.jpg" loading="lazy" class="w-full h-full object-cover">
+                            <a href="https://youtube.com/${isShort ? 'shorts/' : 'watch?v='}${id}" target="_blank" class="absolute inset-0 flex items-center justify-center bg-black/40 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div class="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-black shadow-lg">▶</div>
+                            </a>
+                        </div>
+                    </div>`;
+                fragment.appendChild(div);
+            });
+            container.appendChild(fragment);
+        };
+
+        renderGallery('video-grid', videoIds);
+        renderGallery('shorts-grid', shortIds, true);
+
+        // Three.js Optimization
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, powerPreference: "high-performance" });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const group = new THREE.Group();
+        const count = window.innerWidth < 768 ? 15 : 30; // Fewer objects on mobile
+        const geometry = new THREE.IcosahedronGeometry(1, 0);
+        const material = new THREE.MeshBasicMaterial({ color: 0x10b981, wireframe: true, transparent: true, opacity: 0.1 });
+
+        for(let i=0; i<count; i++) {
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(Math.random() * 40 - 20, Math.random() * 40 - 20, Math.random() * 40 - 20);
+            mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+            mesh.scale.setScalar(Math.random() * 2);
+            group.add(mesh);
+        }
+        scene.add(group);
+        camera.position.z = 25;
+
+        // Throttled Animation
+        let lastTime = 0;
+        function animate(time) {
+            requestAnimationFrame(animate);
+            if (time - lastTime < 16) return; // Cap at ~60fps
+            lastTime = time;
+            group.rotation.y += 0.001;
+            renderer.render(scene, camera);
+        }
+        requestAnimationFrame(animate);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }, { passive: true });
+
+        // Cursor logic for Desktop only
+        if (window.innerWidth > 1024) {
+            const cursor = document.getElementById('cursor');
+            document.addEventListener('mousemove', e => {
+                cursor.style.left = e.clientX + 'px';
+                cursor.style.top = e.clientY + 'px';
+            }, { passive: true });
+        }
+
+        function sendWhatsApp() {
+            const name = document.getElementById('contact_name').value;
+            if(!name) return alert("Please enter your name.");
+            window.open(`https://wa.me/919365889768?text=Hello, I am ${name}`, '_blank');
+        }
+    </script>
+</body>
+</html>
